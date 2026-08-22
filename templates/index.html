@@ -10,7 +10,7 @@
   <div class="hero-body">
     <div class="eyebrow">{{ hero.source }}</div>
     <h1>{{ hero.title }}</h1>
-    <div class="meta">{{ hero.published }}</div>
+    <div class="meta">{{ hero.published[:10] }}</div>
   </div>
 </a>
 {% endif %}

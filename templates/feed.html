@@ -26,7 +26,7 @@
     </div>
     <div>
       <a class="title" href="{{ item.url }}">{{ item.title }}</a>
-      <div class="meta">{{ item.source }} / {{ item.published }}</div>
+      <div class="meta">{{ item.source }} / {{ item.published[:10] }}</div>
       <p class="excerpt">{{ item.summary | excerpt }}</p>
     </div>
   </div>

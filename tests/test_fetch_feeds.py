@@ -545,6 +545,49 @@ def test_is_excluded_false_for_fashion_items_mentioning_death_or_secondhand():
         assert _is_excluded(item) is False, item["title"]
 
 
+def test_is_excluded_true_for_4th_round_new_categories():
+    # 実データ254件を全件確認して発見した新規混入カテゴリ（2026-08-25）。
+    titles = [
+        "【日曜日22時占い】今週の運勢は？12星座別 ＜8月23日〜9月5日＞",
+        "ブックエクスチェンジや占術家によるセッションも。イソップが4日間にわたり新たなコレクションを祝福します。",
+        "The Future of Cars Looks Surprisingly Retro",
+        "Eccentrica Just Made Monterey Car Week Even Louder",
+        "ウォルマートのサブスク新特典は写真も送金もパンク修理も無料　暮らしを囲い込む経済圏",
+        "万引き防止だけじゃない？米小売のAI活用が従業員保護の用途にも拡大",
+        "Nice Hand Soap Is The New Status Symbol",
+        "How Eric Wareheim Went from Comedy Star to Los Angeles' Plant Guru",
+        "ジャズ喫茶「新宿DUG」が閉店　65年の歴史に幕",
+        "初心者向け「3Dプリンター」徹底ガイド｜個人の活用法と作品例",
+        "累積赤字540億円、「クールジャパン機構」廃止へ　スパイバーや三越伊勢丹HDにも出資",
+        "I-neが髪の内部まで美容成分を届ける浸透技術を開発",
+        "マツキヨココカラ＆カンパニーが「ジョンマスターオーガニック」運営会社を買収",
+        "BTS j-hopeがオーラルケア「コルゲート」歯磨き粉のアンバサダーに　日本展開は未定",
+    ]
+    for title in titles:
+        assert _is_excluded({"title": title, "summary": ""}) is True, title
+
+
+def test_is_excluded_true_for_apparel_business_columns():
+    # 商品情報ではないアパレル業界のビジネスコラム（経営史・出店戦略・海外事業展開等）。
+    # オーナー確認のうえ除外対象に追加した境界事例（2026-08-25）。
+    titles = [
+        "グンゼ・ボディワイルドが営業赤字でも残る理由（前編） ブランドの開発史",
+        "セカストはなぜ全国最大規模の「メガ店舗」を川崎に出店するのか",
+        "アシックス、ウォーキング事業でも世界へ　レザーシューズで中国のビジネスパーソンに照準",
+        "America's Mid-Tier Fashion Market Is Thriving",
+    ]
+    for title in titles:
+        assert _is_excluded({"title": title, "summary": ""}) is True, title
+
+
+def test_is_excluded_false_for_watch_column_not_matching_naze_keyword():
+    # 「セカストはなぜ...出店するのか」の「なぜ」を単体でキーワードにすると、
+    # この時計コラムのような無関係な記事に誤爆する。「出店するのか」まで含めた
+    # フレーズのみを対象にすることで、この記事は除外されない（回帰確認）。
+    item = {"title": "ロレックスやカルティエはなぜ「名品」と呼ばれるの？——時計の基本の「キ」第2回", "summary": ""}
+    assert _is_excluded(item) is False
+
+
 def test_fetch_source_filters_out_excluded_items():
     source = {"name": "Fashionsnap", "url": "https://example.com/feed.xml"}
     fake_items = [

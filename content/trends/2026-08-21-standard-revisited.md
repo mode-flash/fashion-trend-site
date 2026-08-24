@@ -5,7 +5,6 @@ images:
   - https://www.fashionsnap.com/article/2026-08-21/ittala-cafeaalto/
   - https://www.fashionsnap.com/article/2026-08-21/aquascutum-medicom-toy/
   - https://www.fashionsnap.com/article/2026-08-21/lappartement-20th/
-  - https://www.fashionsnap.com/article/2026-08-20/cool-japan-fund-restructuring/
   - https://hypebeast.com/2026/8/supreme-chief-creative-officer-steps-down-after-22-years
 ---
 

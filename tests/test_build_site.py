@@ -1,6 +1,8 @@
 from pathlib import Path
 
-from scripts.build_site import build, excerpt, load_items, load_trend_posts, _pick_hero, _group_by_source, _prioritize_japanese
+import json
+
+from scripts.build_site import build, excerpt, load_items, load_trend_posts, _pick_hero, _group_by_source, _prioritize_japanese, _build_search_index
 
 
 def test_excerpt_strips_html_tags_and_entities_and_truncates():
@@ -547,3 +549,82 @@ def test_build_trends_pages_link_assets_one_level_up(tmp_path):
 
     detail = (tmp_path / "trends" / "current-slug.html").read_text(encoding="utf-8")
     assert 'href="../static/style.css"' in detail
+
+
+def test_build_search_index_includes_items_and_trends():
+    items = [
+        {
+            "title": "アディダス新作サンバ",
+            "url": "https://example.com/samba",
+            "source": "Highsnobiety",
+            "published": "2026-08-22T07:10:03+00:00",
+            "summary": "<p>新作のサンバが登場しました。</p>",
+            "image_url": "https://example.com/samba.jpg",
+        },
+    ]
+    trends = [
+        {
+            "title": "定番に一手だけ加えた一週間",
+            "date": "2026-08-21",
+            "slug": "standard-revisited",
+            "html": "<h2>見出し</h2><p>本文のテキストです。</p>",
+            "images": [{"image_url": "https://example.com/trend.jpg", "source": "Fashionsnap", "url": "https://example.com/a", "title": "紹介アイテム"}],
+        },
+    ]
+    index = _build_search_index(items, trends)
+    assert len(index) == 2
+
+    item_entry = next(e for e in index if e["type"] == "item")
+    assert item_entry["title"] == "アディダス新作サンバ"
+    assert "新作のサンバが登場しました。" in item_entry["excerpt"]
+    assert item_entry["url"] == "https://example.com/samba"
+    assert item_entry["source"] == "Highsnobiety"
+    assert item_entry["date"] == "2026-08-22"
+    assert item_entry["image_url"] == "https://example.com/samba.jpg"
+
+    trend_entry = next(e for e in index if e["type"] == "trend")
+    assert trend_entry["title"] == "定番に一手だけ加えた一週間"
+    assert "本文のテキストです。" in trend_entry["excerpt"]
+    assert "<h2>" not in trend_entry["excerpt"]
+    assert trend_entry["url"] == "trends/standard-revisited.html"
+    assert trend_entry["source"] == "トレンド分析"
+    assert trend_entry["image_url"] == "https://example.com/trend.jpg"
+
+
+def test_build_search_index_trend_without_images_has_none_image_url():
+    trends = [{"title": "画像なし記事", "date": "2026-08-20", "slug": "no-image-post", "html": "<p>本文</p>", "images": []}]
+    index = _build_search_index([], trends)
+    assert index[0]["image_url"] is None
+
+
+def test_build_writes_search_page_and_index_json(tmp_path):
+    items = [
+        {
+            "title": "記事タイトル",
+            "url": "https://example.com/1",
+            "source": "Fashionsnap",
+            "published": "2026-08-22T00:00:00+00:00",
+            "summary": "紹介文です",
+            "image_url": None,
+        },
+    ]
+    trends = [{"title": "トレンド記事", "date": "2026-08-21", "slug": "post-a", "html": "<p>内容</p>", "images": []}]
+    build(tmp_path, items, trends)
+
+    assert (tmp_path / "search.html").exists()
+    search_html = (tmp_path / "search.html").read_text(encoding="utf-8")
+    assert "search-input" in search_html
+    assert 'static/search.js' in search_html
+
+    index_path = tmp_path / "search-index.json"
+    assert index_path.exists()
+    data = json.loads(index_path.read_text(encoding="utf-8"))
+    assert len(data) == 2
+    titles = {e["title"] for e in data}
+    assert titles == {"記事タイトル", "トレンド記事"}
+
+
+def test_base_nav_includes_search_link(tmp_path):
+    build(tmp_path, [], [])
+    index_html = (tmp_path / "index.html").read_text(encoding="utf-8")
+    assert 'href="search.html">検索</a>' in index_html

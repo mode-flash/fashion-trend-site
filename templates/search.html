@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}検索 - MODE FLASH{% endblock %}
+{% block content %}
+
+<div class="section-head">
+  <h2>検索</h2>
+</div>
+
+<div class="search-box">
+  <input type="search" id="search-input" placeholder="キーワードで検索" autocomplete="off">
+</div>
+
+<p id="search-status" class="search-status"></p>
+<div id="search-results" class="card-grid"></div>
+
+<script src="{{ asset_prefix }}static/search.js" defer></script>
+{% endblock %}

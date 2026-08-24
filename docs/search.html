@@ -3,33 +3,47 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{% block title %}MODE FLASH | ファッショントレンド速報{% endblock %}</title>
+<title>検索 - MODE FLASH</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Zen+Kaku+Gothic+New:wght@900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{{ asset_prefix }}static/style.css">
+<link rel="stylesheet" href="static/style.css">
 <noscript><style>.section-head{opacity:1!important;transform:none!important;}</style></noscript>
 </head>
 <body>
 <header class="site-header">
-  <a class="brand" href="{{ asset_prefix }}index.html">
+  <a class="brand" href="index.html">
     <span class="brand-en">MODE FLASH</span>
     <span class="brand-ja">ファッショントレンド速報</span>
   </a>
   <span class="tagline">STREET &amp; CASUAL / DAILY DROP</span>
 </header>
 <nav class="site-nav">
-  <a href="{{ asset_prefix }}index.html">トップ</a>
-  <a href="{{ asset_prefix }}feed.html">新着情報</a>
-  <a href="{{ asset_prefix }}trends/index.html">トレンド分析</a>
-  <a href="{{ asset_prefix }}search.html">検索</a>
+  <a href="index.html">トップ</a>
+  <a href="feed.html">新着情報</a>
+  <a href="trends/index.html">トレンド分析</a>
+  <a href="search.html">検索</a>
 </nav>
 <main>
-{% block content %}{% endblock %}
+
+
+<div class="section-head">
+  <h2>検索</h2>
+</div>
+
+<div class="search-box">
+  <input type="search" id="search-input" placeholder="キーワードで検索" autocomplete="off">
+</div>
+
+<p id="search-status" class="search-status"></p>
+<div id="search-results" class="card-grid"></div>
+
+<script src="static/search.js" defer></script>
+
 </main>
 <footer class="site-footer">
   国内・海外のストリート系ブランドの新着情報を自動収集しています
 </footer>
-<script src="{{ asset_prefix }}static/main.js" defer></script>
+<script src="static/main.js" defer></script>
 </body>
 </html>

@@ -174,6 +174,40 @@ def _pick_hero(items: list[dict]) -> tuple[dict | None, list[dict]]:
     return None, []
 
 
+def _build_search_index(items: list[dict], trends: list[dict]) -> list[dict]:
+    """サイト内検索用の軽量なインデックスをitems・trendsから生成する.
+
+    静的サイトのためサーバーサイド検索は使えず、ブラウザ側のJavaScript
+    （static/search.js）が単純な部分文字列一致でこのインデックスを絞り込む
+    方式を取る。日本語の分かち書きは行わないため、タイトル・本文（トレンド
+    記事はプレーンテキスト化した全文、新着アイテムは抜粋）の両方を検索対象
+    として持たせ、部分一致でも見つけやすくする。
+    """
+    index = []
+    for item in items[:FEED_ITEM_LIMIT]:
+        index.append({
+            "type": "item",
+            "title": item.get("title", ""),
+            "excerpt": excerpt(item.get("summary", "")),
+            "url": item.get("url", ""),
+            "source": item.get("source", ""),
+            "date": (item.get("published") or "")[:10],
+            "image_url": item.get("image_url"),
+        })
+    for post in trends:
+        first_image = post["images"][0]["image_url"] if post.get("images") else None
+        index.append({
+            "type": "trend",
+            "title": post.get("title", ""),
+            "excerpt": excerpt(post.get("html", ""), limit=100_000),
+            "url": f"trends/{post['slug']}.html",
+            "source": "トレンド分析",
+            "date": post.get("date", ""),
+            "image_url": first_image,
+        })
+    return index
+
+
 def _group_by_source(items: list[dict]) -> list[dict]:
     """itemsを出典ソースごとにグループ化する。
 
@@ -234,6 +268,14 @@ def build(output_dir: Path, items: list[dict], trends: list[dict]) -> None:
     )
     (trends_dir / "index.html").write_text(
         env.get_template("trends.html").render(trends=trends, asset_prefix="../"),
+        encoding="utf-8",
+    )
+    (output_dir / "search.html").write_text(
+        env.get_template("search.html").render(),
+        encoding="utf-8",
+    )
+    (output_dir / "search-index.json").write_text(
+        json.dumps(_build_search_index(items, trends), ensure_ascii=False),
         encoding="utf-8",
     )
     detail_tpl = env.get_template("trend_detail.html")

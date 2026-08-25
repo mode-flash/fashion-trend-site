@@ -642,6 +642,22 @@ def test_detect_brands_returns_multiple_for_collaboration_titles():
     assert "Nike" in brands
 
 
+def test_detect_brands_matches_hoka_and_on():
+    assert _detect_brands("ホカの定番ランニングシューズが登場") == ["HOKA"]
+    assert _detect_brands("オンがブランド初のミュール型シューズ発売") == ["On"]
+
+
+def test_detect_brands_on_keyword_does_not_match_unrelated_one_titles():
+    # "On"を単体でキーワードにすると、英語タイトル中の"One"（"One Piece"等）に
+    # 誤爆する。複合フレーズのみを対象にすることで回避している（回帰確認）。
+    titles = [
+        "Nike Unveils Official 'One Piece' Footwear and Apparel Collection",
+        "McLaren Teams Up with Central Saint Martins in One-Of-A-Kind Fashion Collaboration",
+    ]
+    for title in titles:
+        assert "On" not in _detect_brands(title), title
+
+
 def test_group_by_brand_orders_by_count_descending_and_includes_multi_brand_items():
     items = [
         {"title": "ナイキの新作A", "url": "https://example.com/1"},

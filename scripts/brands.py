@@ -48,4 +48,9 @@ BRAND_KEYWORDS: dict[str, list[str]] = {
     "Ralph Lauren": ["Ralph Lauren", "ラルフ ローレン", "ラルフローレン"],
     "United Arrows": ["United Arrows", "ユナイテッドアローズ"],
     "Hermes": ["Hermès", "エルメス"],
+    # "On"は単体だと英語タイトル中の"One"（例: "One Piece"）等に誤爆するため、
+    # ブランドを指すことが明確な複合フレーズのみを対象にする（日本語の「オン」は
+    # 実データで誤爆が無いことを確認済み）。
+    "On": ["On Running", "On Cloud", "オン"],
+    "HOKA": ["HOKA", "ホカ"],
 }

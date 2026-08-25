@@ -474,6 +474,24 @@ main {
   color: var(--mute);
 }
 
+/* ---- ブランド一覧ページ（brands.html） ---- */
+
+.brand-note {
+  margin: 1rem 0 0;
+  font-size: 0.85rem;
+  color: var(--mute);
+}
+
+.brand-note a {
+  color: var(--mute);
+  text-decoration: underline;
+}
+
+.brand-note a:hover,
+.brand-note a:focus-visible {
+  color: var(--accent);
+}
+
 #search-results.card-grid {
   margin-top: 1rem;
 }

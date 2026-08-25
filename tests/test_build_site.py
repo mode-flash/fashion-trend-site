@@ -2,7 +2,7 @@ from pathlib import Path
 
 import json
 
-from scripts.build_site import build, excerpt, load_items, load_trend_posts, _pick_hero, _group_by_source, _prioritize_japanese, _build_search_index
+from scripts.build_site import build, excerpt, load_items, load_trend_posts, _pick_hero, _group_by_source, _prioritize_japanese, _build_search_index, _detect_brands, _group_by_brand
 
 
 def test_excerpt_strips_html_tags_and_entities_and_truncates():
@@ -628,3 +628,66 @@ def test_base_nav_includes_search_link(tmp_path):
     build(tmp_path, [], [])
     index_html = (tmp_path / "index.html").read_text(encoding="utf-8")
     assert 'href="search.html">検索</a>' in index_html
+
+
+def test_detect_brands_matches_japanese_and_english_names():
+    assert _detect_brands("ナイキの新作エア マックスが登場") == ["Nike"]
+    assert _detect_brands("Nike's Recovery Runner Looks Damn Good") == ["Nike"]
+    assert _detect_brands("PONTI 2027SS コレクション") == []
+
+
+def test_detect_brands_returns_multiple_for_collaboration_titles():
+    brands = _detect_brands("adidasとナイキが初コラボ")
+    assert "adidas" in brands
+    assert "Nike" in brands
+
+
+def test_group_by_brand_orders_by_count_descending_and_includes_multi_brand_items():
+    items = [
+        {"title": "ナイキの新作A", "url": "https://example.com/1"},
+        {"title": "ナイキの新作B", "url": "https://example.com/2"},
+        {"title": "アディダスの新作", "url": "https://example.com/3"},
+        {"title": "小規模ブランドPONTIの新作", "url": "https://example.com/4"},
+    ]
+    groups = _group_by_brand(items)
+    assert groups[0]["brand"] == "Nike"
+    assert len(groups[0]["entries"]) == 2
+    assert groups[1]["brand"] == "adidas"
+    assert len(groups[1]["entries"]) == 1
+    # 検出されなかった記事（PONTI）はどのグループにも含まれない
+    all_titles = {e["title"] for g in groups for e in g["entries"]}
+    assert "小規模ブランドPONTIの新作" not in all_titles
+
+
+def test_build_writes_brands_page(tmp_path):
+    items = [
+        {
+            "title": "ナイキの新作スニーカー",
+            "url": "https://example.com/1",
+            "source": "Fashionsnap",
+            "published": "2026-08-22T00:00:00+00:00",
+            "summary": "紹介文",
+            "image_url": None,
+        },
+        {
+            "title": "小規模ブランドPONTIの新作",
+            "url": "https://example.com/2",
+            "source": "Fashionsnap",
+            "published": "2026-08-21T00:00:00+00:00",
+            "summary": "紹介文",
+            "image_url": None,
+        },
+    ]
+    build(tmp_path, items, [])
+
+    assert (tmp_path / "brands.html").exists()
+    brands_html = (tmp_path / "brands.html").read_text(encoding="utf-8")
+    assert "Nike" in brands_html
+    assert "ナイキの新作スニーカー" in brands_html
+    assert "小規模ブランドPONTIの新作" not in brands_html
+
+
+def test_base_nav_includes_brands_link(tmp_path):
+    build(tmp_path, [], [])
+    index_html = (tmp_path / "index.html").read_text(encoding="utf-8")
+    assert 'href="brands.html">ブランド</a>' in index_html

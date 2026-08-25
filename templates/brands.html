@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}ブランド一覧 - MODE FLASH{% endblock %}
+{% block content %}
+
+<div class="section-head">
+  <h2>ブランド一覧</h2>
+</div>
+
+<p class="brand-note">よく取り上げる主要ブランドのみを対象にした簡易的な分類です。すべての記事は<a href="feed.html">新着情報</a>でご覧いただけます。</p>
+
+{% if groups %}
+<nav class="feed-toc">
+{% for group in groups %}
+  <a href="#brand-{{ loop.index }}">{{ group.brand }}（{{ group.entries|length }}）</a>
+{% endfor %}
+</nav>
+{% endif %}
+
+{% for group in groups %}
+<div class="section-head feed-source-head" id="brand-{{ loop.index }}">
+  <h2>{{ group.brand }}</h2>
+</div>
+<div class="feed-list">
+{% for item in group.entries %}
+  <div class="feed-item">
+    <div class="thumb{% if not item.image_url %} no-image{% endif %}">
+      {% if item.image_url %}<img src="{{ item.image_url }}" alt="{{ item.title }}">{% endif %}
+    </div>
+    <div>
+      <a class="title" href="{{ item.url }}">{{ item.title }}</a>
+      <div class="meta">{{ item.source }} / {{ item.published[:10] }}</div>
+      <p class="excerpt">{{ item.summary | excerpt }}</p>
+    </div>
+  </div>
+{% endfor %}
+</div>
+{% endfor %}
+
+{% endblock %}

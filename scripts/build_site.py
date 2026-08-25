@@ -12,6 +12,8 @@ import frontmatter
 import markdown as md
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
+from scripts.brands import BRAND_KEYWORDS
+
 TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 
@@ -208,6 +210,38 @@ def _build_search_index(items: list[dict], trends: list[dict]) -> list[dict]:
     return index
 
 
+def _detect_brands(title: str) -> list[str]:
+    """タイトル文字列から、BRAND_KEYWORDSに登録された主要ブランドを検出する.
+
+    RSSフィードにはブランドの構造化データが含まれないため、タイトルの
+    部分文字列一致で判定する簡易的な検出（オーナー確認済み、2026-08-25）。
+    日本の小規模インディーズブランドは対象外で、記事に頻出する主要
+    ブランドのみをカバーする。
+    """
+    return [
+        brand
+        for brand, keywords in BRAND_KEYWORDS.items()
+        if any(kw in title for kw in keywords)
+    ]
+
+
+def _group_by_brand(items: list[dict]) -> list[dict]:
+    """itemsをタイトルから検出した主要ブランドごとにグループ化する.
+
+    1件の記事が複数ブランドにマッチする場合（コラボ記事等）は、該当する
+    全てのブランドのグループに重複して含める。ブランドが1つも検出されなかった
+    記事（大半を占める小規模ブランドの記事）はこのページには表示されない
+    （新着一覧・トップページには引き続き表示される）。
+    並び順は記事数の多い順（同数の場合はブランド名のアルファベット順）。
+    """
+    groups: dict[str, list[dict]] = {}
+    for item in items:
+        for brand in _detect_brands(item.get("title", "")):
+            groups.setdefault(brand, []).append(item)
+    ordered = sorted(groups.items(), key=lambda kv: (-len(kv[1]), kv[0]))
+    return [{"brand": brand, "entries": entries} for brand, entries in ordered]
+
+
 def _group_by_source(items: list[dict]) -> list[dict]:
     """itemsを出典ソースごとにグループ化する。
 
@@ -263,6 +297,12 @@ def build(output_dir: Path, items: list[dict], trends: list[dict]) -> None:
     (output_dir / "feed.html").write_text(
         env.get_template("feed.html").render(
             groups=_group_by_source(items[:FEED_ITEM_LIMIT])
+        ),
+        encoding="utf-8",
+    )
+    (output_dir / "brands.html").write_text(
+        env.get_template("brands.html").render(
+            groups=_group_by_brand(items[:FEED_ITEM_LIMIT])
         ),
         encoding="utf-8",
     )

@@ -1,7 +1,13 @@
+import os
+import stat
+import subprocess
 from datetime import datetime, timezone
+
+import pytest
 
 from scripts.check_stale_drafts import (
     STALE_LABEL,
+    _run_gh,
     build_comment,
     notify_stale_drafts,
     select_stale_drafts,
@@ -78,3 +84,22 @@ def test_notify_dry_run_reports_but_makes_no_gh_calls():
     stale = notify_stale_drafts([_pr(3)], NOW, 5, calls.append, dry_run=True)
     assert [d.number for d in stale] == [3]
     assert calls == []
+
+
+def _install_fake_gh(tmp_path, monkeypatch, script):
+    fake_gh = tmp_path / "gh"
+    fake_gh.write_text("#!/bin/sh\n" + script, encoding="utf-8")
+    fake_gh.chmod(fake_gh.stat().st_mode | stat.S_IEXEC)
+    monkeypatch.setenv("PATH", str(tmp_path) + os.pathsep + os.environ["PATH"])
+
+
+def test_run_gh_returns_stdout(tmp_path, monkeypatch):
+    _install_fake_gh(tmp_path, monkeypatch, "echo '[1]'\n")
+    assert _run_gh(["pr", "list"]).strip() == "[1]"
+
+
+def test_run_gh_failure_raises_and_shows_gh_error_message(tmp_path, monkeypatch, capfd):
+    _install_fake_gh(tmp_path, monkeypatch, "echo 'label create: permission denied' >&2\nexit 1\n")
+    with pytest.raises(subprocess.CalledProcessError):
+        _run_gh(["label", "create", STALE_LABEL])
+    assert "permission denied" in capfd.readouterr().err

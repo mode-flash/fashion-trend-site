@@ -85,8 +85,9 @@ def notify_stale_drafts(
 
 
 def _run_gh(args: list[str]) -> str:
+    # stderrは取り込まず、ghのエラーメッセージをそのままログに出す
     result = subprocess.run(
-        ["gh", *args], check=True, capture_output=True, text=True, encoding="utf-8"
+        ["gh", *args], check=True, stdout=subprocess.PIPE, text=True, encoding="utf-8"
     )
     return result.stdout
 

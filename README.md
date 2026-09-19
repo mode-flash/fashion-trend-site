@@ -30,3 +30,4 @@ pytest
   リジェクトされることがある）。
 - 公開URL: https://kosaku0801-a11y.github.io/fashion-trend-site/
 - `docs/`はビルドの生成物。手で編集しないこと（`build_site.py`を実行するたびに上書きされる）。
+- `stale-draft-alert.yml`が毎日走り、作成から5日以上マージされていない`trend-draft-`ブランチのPRにコメントと`stale-draft`ラベルを付ける。トレンド記事のroutineはオープンな下書きPRが残っている間は新しい下書きを作らないため、PRを放置すると記事の更新が止まる。

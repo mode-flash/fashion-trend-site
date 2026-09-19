@@ -1,0 +1,27 @@
+name: Stale Draft Alert
+
+on:
+  schedule:
+    - cron: "30 0 * * *"
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "作成からこの日数以上経った下書きPRを通知する（空欄なら既定値）"
+        required: false
+
+jobs:
+  alert:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Notify stale draft PRs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          DAYS: ${{ inputs.days }}
+        run: python3 -m scripts.check_stale_drafts ${DAYS:+--days "$DAYS"}

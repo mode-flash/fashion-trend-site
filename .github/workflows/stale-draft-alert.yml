@@ -6,8 +6,8 @@ on:
   workflow_dispatch:
     inputs:
       days:
-        description: "作成からこの日数以上経った下書きPRを通知する"
-        default: "5"
+        description: "作成からこの日数以上経った下書きPRを通知する（空欄なら既定値）"
+        required: false
 
 jobs:
   alert:
@@ -15,7 +15,6 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
-      issues: write
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
@@ -24,5 +23,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          DAYS: ${{ inputs.days || '5' }}
-        run: python3 -m scripts.check_stale_drafts --days "$DAYS"
+          DAYS: ${{ inputs.days }}
+        run: python3 -m scripts.check_stale_drafts ${DAYS:+--days "$DAYS"}

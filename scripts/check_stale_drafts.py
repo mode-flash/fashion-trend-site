@@ -21,6 +21,7 @@ STALE_LABEL = "stale-draft"
 STALE_LABEL_COLOR = "d93f0b"
 STALE_LABEL_DESCRIPTION = "マージ待ちで滞留しているトレンド記事の下書きPR"
 DEFAULT_THRESHOLD_DAYS = 5
+PR_LIST_LIMIT = 1000
 
 
 class StaleDraft(NamedTuple):
@@ -34,14 +35,23 @@ def _parse_time(value: str) -> datetime:
 
 
 def select_stale_drafts(prs: list[dict], now: datetime, threshold_days: int) -> list[StaleDraft]:
-    """下書きPRのうち、作成からthreshold_days日以上経ち、まだ通知していないものを返す."""
+    """下書きPRのうち、作成からthreshold_days日以上経ち、まだ通知していないものを返す.
+
+    日数はUTCの暦日の差で数える。routineがPRを作るのは0時15分前後で、
+    この通知は0時30分に走る。経過時間で数えると、PRの作成が15分ほど遅れただけで
+    通知が1日遅れるため、暦日にしている。フォークからのPRは対象外にする。
+    """
+    today = now.astimezone(timezone.utc).date()
     stale = []
     for pr in prs:
+        if pr["isCrossRepository"]:
+            continue
         if not pr["headRefName"].startswith(DRAFT_BRANCH_PREFIX):
             continue
         if any(label["name"] == STALE_LABEL for label in pr["labels"]):
             continue
-        days = (now - _parse_time(pr["createdAt"])).days
+        created = _parse_time(pr["createdAt"]).astimezone(timezone.utc).date()
+        days = (today - created).days
         if days >= threshold_days:
             stale.append(StaleDraft(pr["number"], days))
     return stale
@@ -64,22 +74,24 @@ def notify_stale_drafts(
 ) -> list[StaleDraft]:
     """滞留した下書きPRにコメントとラベルを付ける.
 
-    ラベルを通知済みの目印にする。コメントを先に投稿するのは、途中で失敗したときに
-    通知されないまま終わるより、翌日に重複して通知されるほうがましなため。
+    ラベルを通知済みの目印にする。処理はコメント、ラベルの作成、ラベルの付与の順にする。
+    途中で失敗したときは、通知が抜けるより翌日に重複するほうがよいためである。
     """
     stale = select_stale_drafts(prs, now, threshold_days)
-    if stale and not dry_run:
-        run_gh([
-            "label", "create", STALE_LABEL,
-            "--color", STALE_LABEL_COLOR,
-            "--description", STALE_LABEL_DESCRIPTION,
-            "--force",
-        ])
+    label_ready = False
     for draft in stale:
         logger.info("PR #%d: 作成から%d日経過", draft.number, draft.days)
         if dry_run:
             continue
         run_gh(["pr", "comment", str(draft.number), "--body", build_comment(draft.days)])
+        if not label_ready:
+            run_gh([
+                "label", "create", STALE_LABEL,
+                "--color", STALE_LABEL_COLOR,
+                "--description", STALE_LABEL_DESCRIPTION,
+                "--force",
+            ])
+            label_ready = True
         run_gh(["pr", "edit", str(draft.number), "--add-label", STALE_LABEL])
     return stale
 
@@ -94,21 +106,31 @@ def _run_gh(args: list[str]) -> str:
 
 def list_open_prs(run_gh: Callable[[list[str]], str]) -> list[dict]:
     output = run_gh([
-        "pr", "list", "--state", "open", "--limit", "100",
-        "--json", "number,headRefName,createdAt,labels",
+        "pr", "list", "--state", "open", "--limit", str(PR_LIST_LIMIT),
+        "--json", "number,headRefName,createdAt,labels,isCrossRepository",
     ])
     return json.loads(output)
 
 
-def main() -> None:
+def _non_negative_int(value: str) -> int:
+    try:
+        number = int(value)
+    except ValueError:
+        number = -1
+    if number < 0:
+        raise argparse.ArgumentTypeError(f"0以上の整数を指定してください（指定値: {value}）")
+    return number
+
+
+def main(argv: list[str] | None = None) -> None:
     logging.basicConfig(level=logging.INFO)
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--days", type=int, default=DEFAULT_THRESHOLD_DAYS,
+        "--days", type=_non_negative_int, default=DEFAULT_THRESHOLD_DAYS,
         help="作成からこの日数以上経った下書きPRを通知する（既定: %(default)s）",
     )
     parser.add_argument("--dry-run", action="store_true", help="通知せず、対象だけを表示する")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     stale = notify_stale_drafts(
         list_open_prs(_run_gh), datetime.now(timezone.utc), args.days, _run_gh, dry_run=args.dry_run
     )
